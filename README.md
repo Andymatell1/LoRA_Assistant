@@ -13,7 +13,16 @@ Make sure to install the required packages:
 
 ```pip install torch --index-url https://download.pytorch.org/whl/cu121```
 
+```pip install clearml datasets```
+
 ```pip install "transformers>=4.45" accelerate bitsandbytes safetensors sentencepiece```
+
+Note: in the case of CUDA errors with the setup, try the following:
+``` pip uninstall torch torchvision torchaudio -y
+ 
+pip install --pre torch torchvision torchaudio \
+  --index-url https://download.pytorch.org/whl/nightly/cu128
+```
 
 # Model Training
 
