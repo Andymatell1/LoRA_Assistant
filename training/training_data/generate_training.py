@@ -20,7 +20,7 @@ cities = [
 phrases = [
     "I'm interested in the location of {}.",
     "Search geographic area of {}.",
-    "Register location for {}.",
+    "{}.",
     "Search the destination {}.",
     "Find me information on {}.",
     "Set up new area for {}.",
@@ -36,7 +36,7 @@ for _ in range(repeats):
         for phrase in phrases:
             line = {
                 "input": phrase.format(city),
-                "assistant_tool_json": f"\n{{\n \"tool\":\"geographic_interest\",\n \"arguments\":{{\n \"location\":\":\"{city}\"\n }}\n}}\n"
+                "assistant_tool_json": f"\n{{\n \"tool\":\"geographic_interest\",\n \"arguments\":{{\n \"region\":\"{city}\"\n }}\n}}\n"
             }
             lines.append(line)
 
