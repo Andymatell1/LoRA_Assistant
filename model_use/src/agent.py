@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import argparse, json, os, sys
-from typing import Optional
+from typing import Optional, Dict
 
 import torch
 from transformers import (
