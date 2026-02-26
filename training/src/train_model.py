@@ -15,22 +15,22 @@ MAX_LEN  = 2048
 VAL_SIZE  = 0.1         # 10% validation
 SEED      = 42
 
-SYSTEM = ( """You are a travel assistant interacting with a user. 
-Your job is to chat naturally in order to gather information.
+SYSTEM = """You are a tool-calling assistant.
 
-You can perform one action:
-1) Add geographic area
-Trigger when the user wants to create or define a new geographic interest area.
-Tool call format (strict):
-{"tool":"geographic_interest","arguments":{"location":<Area name>}}
+When a user mentions a geographic location,
+you MUST respond ONLY with valid JSON in this format:
 
-For area, the required field is a geographic area that you will deduce from any background data in the conversation. 
-If the value needed field is missing or ambiguous ask one short question—do not call the tool yet.
-Do NOT include prose, markdown, or extra keys. Never mix schemas between tools.
-After the tool runs, you will receive [TOOL_RESULT] {…}; then produce a 1–2 sentence, grounded summary if sucessful or not.
-Never fabricate results; never mix prose with the JSON tool call; keep clarifying questions to a single sentence.
-Be concise, precise, and consistent with the schema and formatting above."""
-)
+{
+  "tool": "geographic_interest",
+  "arguments": {
+    "location": "<city>"
+  }
+}
+
+Do not explain.
+Do not add extra text.
+Return exactly one JSON object.
+"""
 
 caseA_path = "../training_data/CaseA.jsonl"
 
@@ -132,14 +132,12 @@ def ensure_str_or_json(obj):
     return ""
 
 def build_prompt(ex):
-    tools_str = ensure_str_or_json(ex.get("tools", []))
     return (
         f"[SYSTEM]\n{SYSTEM}\n\n"
-        f"[TOOLS]\n{tools_str}\n\n"
-        f"[USER]\n{ex.get('input','')}\n\n"
+        f"[USER]\n{ex['input']}\n\n"
         f"[ASSISTANT]\n"
     )
-    
+
 def tokenize_with_mask(ex):
     """
     Supports:
@@ -302,7 +300,7 @@ if __name__ == "__main__":
     print(tok.decode(out[0], skip_special_tokens=True))
 
     result = trainer.train()
-    trainer.save_model()
+    trainer.save_model("./results/trained_lora_model")
 
     metrics = result.metrics          # dict with train_runtime, train_loss, etc.
     print("Final train metrics:", metrics)

@@ -16,7 +16,24 @@ except Exception as e:
     print("Please `pip install peft`.", file=sys.stderr)
     raise
 
-# to run the script: `python SA-Agent.py --adapter_dir ./phi35-mini-api-lora/checkpoint-418`
+# to run the script: `python agent.py --adapter_dir ./phi35-mini-api-lora/checkpoint-418`
+
+SYSTEM = """You are a tool-calling assistant.
+
+When a user mentions a geographic location,
+you MUST respond ONLY with valid JSON in this format:
+
+{
+  "tool": "geographic_interest",
+  "arguments": {
+    "location": "<city>"
+  }
+}
+
+Do not explain.
+Do not add extra text.
+Return exactly one JSON object.
+"""
 
 BASE_MODEL = "microsoft/Phi-3.5-mini-instruct"
 TIMEZONE = "America/New_York"  # adjust to your runtime TZ needs
@@ -58,28 +75,28 @@ def generate_once(model, tok, user_input: str, max_new_tokens: int,
                   top_p: float = 0.9,
                   stream: bool = False) -> str:
 
-    inputs = tok(user_input, return_tensors="pt").to(model.device)
-
-    kwargs = dict(
-        do_sample=do_sample,
-        max_new_tokens=max_new_tokens,
+    prompt = (
+        f"[SYSTEM]\n{SYSTEM}\n\n"
+        f"[USER]\n{user_input}\n\n"
+        f"[ASSISTANT]\n"
     )
 
-    if do_sample:
-        kwargs.update(dict(temperature=temperature, top_p=top_p))
+    inputs = tok(prompt, return_tensors="pt").to(model.device)
 
-    if stream:
-        streamer = TextStreamer(tok, skip_special_tokens=True)
-        out = model.generate(**inputs, streamer=streamer, **kwargs)
-    else:
-        out = model.generate(**inputs, **kwargs)
+    output = model.generate(
+        **inputs,
+        do_sample=False,      # IMPORTANT
+        temperature=0.0,
+        max_new_tokens=200,
+        eos_token_id=tok.eos_token_id
+    )
 
-    text = tok.decode(out[0], skip_special_tokens=True)
+    reply1 = tok.decode(output[0], skip_special_tokens=True)
 
-    # Remove the original prompt from the output
-    generated_text = text[len(user_input):].strip()
+    # Remove the prompt part
+    reply = reply1[len(prompt):].strip()       
 
-    return generated_text
+    return reply
 
 # Very light JSON detector: tries to parse a single JSON object from a string start
 def extract_first_json_object(text: str) -> Optional[str]:
