@@ -2,14 +2,14 @@
 import os, json, torch, random
 from datasets import load_dataset, concatenate_datasets, DatasetDict
 from transformers import (AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig,
-                          TrainingArguments, Trainer, default_data_collator)
+                          TrainingArguments, Trainer, default_data_collator, TrainerCallback)
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 from transformers.trainer_utils import get_last_checkpoint
 from clearml import Task
 
 """Script to train the LORA model with case A data which is geographic interest. Integrated with ClearML for management and vizualization."""
-task = Task.create(project_name="LoRA geography assistant", task_name="LoRA task Version 2 with geographic information", add_task_init_call=True)
-
+task = Task.create(project_name="LoRA geography assistant", task_name="LoRA task Version 1 with geographic information", add_task_init_call=True)
+logger = task.get_logger()
 MODEL_ID = "microsoft/Phi-3.5-mini-instruct"
 MAX_LEN  = 2048
 VAL_SIZE  = 0.1         # 10% validation
@@ -96,6 +96,20 @@ task.connect(lora_cfg)
 tok = AutoTokenizer.from_pretrained(MODEL_ID, use_fast=True)
 if tok.pad_token is None:
     tok.pad_token = tok.eos_token
+
+class ClearMLCallback(TrainerCallback):
+    def on_log(self, args, state, control, logs=None, **kwargs):
+        if logs is None:
+            return
+
+        for k, v in logs.items():
+            if isinstance(v, (int, float)):
+                logger.report_scalar(
+                    "trainer",
+                    k,
+                    iteration=state.global_step,
+                    value=v
+                )
 
 # -------------------------
 # Helpers
@@ -244,7 +258,7 @@ args = TrainingArguments(
     save_steps=500,
     save_total_limit=2,
     gradient_checkpointing=True,
-    report_to="none"
+    report_to="clearml"
 )
 
 if __name__ == "__main__":
@@ -257,6 +271,7 @@ if __name__ == "__main__":
         #tokenizer=tok,
         processing_class=tok,
         data_collator=default_data_collator,
+        callbacks=[ClearMLCallback()]
     )
     model.print_trainable_parameters()  # sanity: shows nonzero trainable params
     
@@ -292,4 +307,3 @@ if __name__ == "__main__":
     metrics = result.metrics          # dict with train_runtime, train_loss, etc.
     print("Final train metrics:", metrics)
     print(model.generation_config)  # current defaults
-

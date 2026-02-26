@@ -11,9 +11,15 @@ Make sure to install the required packages:
 
 ```pip install --upgrade pip```
 
-```pip install torch --index-url https://download.pytorch.org/whl/cu121```
+```pip uninstall torch torchvision torchaudio -y
+ 
+pip install --pre torch torchvision torchaudio \
+  --index-url https://download.pytorch.org/whl/nightly/cu128
+ ```
 
 ```pip install clearml datasets```
+
+```pip install peft```
 
 ```pip install "transformers>=4.45" accelerate bitsandbytes safetensors sentencepiece```
 
